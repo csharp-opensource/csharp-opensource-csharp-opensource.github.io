@@ -86,59 +86,77 @@
       { orgOrUser: "barnuri", isUser: true },
     ];
 
+    const githubToken = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"; // Replace with your token
     const reposContainer = document.getElementById("repositories");
     const loadingIndicator = document.getElementById("loading");
 
     async function fetchRepositories() {
       try {
-        const reposPromises = fetchConfigs.map(async ({ orgOrUser, isUser }) => {
-          const response = await fetch(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`);
-          return response.json();
+        const query = `
+          query {
+            ${fetchConfigs.map(({ orgOrUser, isUser }, index) => `
+              group${index}: ${isUser ? "user" : "organization"}(login: "${orgOrUser}") {
+                repositories(first: 10, orderBy: { field: PUSHED_AT, direction: DESC }) {
+                  nodes {
+                    name
+                    description
+                    url
+                    collaborators(first: 5) {
+                      nodes {
+                        login
+                        avatarUrl
+                        url
+                      }
+                    }
+                  }
+                }
+              }
+            `).join("\n")}
+          }
+        `;
+
+        const response = await fetch("https://api.github.com/graphql", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${githubToken}`,
+          },
+          body: JSON.stringify({ query }),
         });
 
-        const allRepos = (await Promise.all(reposPromises)).flat();
-        allRepos.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
+        const { data } = await response.json();
+        if (!data) throw new Error("Failed to fetch data.");
 
-        const repoElements = allRepos.map(async (repo) => {
-          const repoDiv = document.createElement("div");
-          repoDiv.className = "repo";
-          repoDiv.innerHTML = `
-            <h2>${repo.name}</h2>
-            <p>${repo.description || "No description"}</p>
-          `;
-
-          // Fetch contributors concurrently
-          try {
-            const contributorsResponse = await fetch(repo.contributors_url);
-            const contributors = await contributorsResponse.json();
+        // Process and render repositories
+        Object.values(data).forEach(group => {
+          group.repositories.nodes.forEach(repo => {
+            const repoDiv = document.createElement("div");
+            repoDiv.className = "repo";
+            repoDiv.innerHTML = `
+              <h2><a href="${repo.url}" target="_blank">${repo.name}</a></h2>
+              <p>${repo.description || "No description available"}</p>
+            `;
 
             const contributorsDiv = document.createElement("div");
             contributorsDiv.className = "contributors";
-            contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
+            contributorsDiv.innerHTML = "<strong>Top Collaborators:</strong>";
 
-            contributors.forEach(contributor => {
+            repo.collaborators.nodes.forEach(contributor => {
               const contributorDiv = document.createElement("div");
               contributorDiv.className = "contributor";
               contributorDiv.innerHTML = `
-                <img src="${contributor.avatar_url}" alt="${contributor.login}" class="avatar">
-                <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
+                <img src="${contributor.avatarUrl}" alt="${contributor.login}" class="avatar">
+                <a href="${contributor.url}" target="_blank">${contributor.login}</a>
               `;
               contributorsDiv.appendChild(contributorDiv);
             });
 
             repoDiv.appendChild(contributorsDiv);
-          } catch (error) {
-            console.error(`Error fetching contributors for ${repo.name}:`, error);
-          }
-
-          return repoDiv;
+            reposContainer.appendChild(repoDiv);
+          });
         });
 
-        // Wait for all repository elements to be created and append them
-        const elements = await Promise.all(repoElements);
-        elements.forEach(element => reposContainer.appendChild(element));
-
-        // Hide the loading indicator and show the data
+        // Hide loading indicator and show repositories
         loadingIndicator.style.display = "none";
         reposContainer.style.display = "block";
       } catch (error) {
