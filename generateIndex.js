@@ -18,12 +18,15 @@ async function getRepo(url) {
             console.error(`Error fetching contributors ${repo.contributors_url}`, error);
             repo.contributorsList = [];
         }
-        return {
+        repo = {
             html_url: repo.html_url,
             name: repo.name,
             description: repo.description,
             contributorsList: repo.contributorsList,
+            contributors_url: repo.contributors_url,
+            pushed_at: repo.pushed_at,
         };
+        return repo;
     } catch (error) {
         console.error(`Error fetching repository ${url}`, error);
         return null;
