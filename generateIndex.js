@@ -8,7 +8,7 @@ let headers = {
 async function fetchRepositories() {
     try {
         const reposPromises = fetchConfigs.map(({ orgOrUser, isUser }) =>
-            fetchRepositories(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
+            getRepo(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
         );
 
         const allRepos = (await Promise.all(reposPromises))
@@ -34,7 +34,7 @@ async function fetchRepositories() {
     }
 }
 
-async function fetchRepositories(url) {
+async function getRepo(url) {
     const response = await fetch(url, { headers });
     if (!response.ok) throw new Error("Failed to fetch repositories");
     return response.json();
