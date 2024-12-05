@@ -37,7 +37,7 @@
         let repos = [];
         for (const fetchConfig of fetchConfigs) {
           try {
-              const reposResponse = await fetch(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`);
+              const reposResponse = await fetch(`https://api.github.com/${fetchConfig.isUser ? "users" : "orgs"}/${fetchConfig.orgOrUser}/repos?sort=pushed`);
               repos = [...repos, ...(await reposResponse.json())];
           }
           catch (error) {
