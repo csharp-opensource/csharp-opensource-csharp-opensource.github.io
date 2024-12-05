@@ -8,7 +8,10 @@ let headers = {
 async function getRepos(url) {
     try {
         const response = await fetch(url, { headers });
-        if (!response.ok) throw new Error("Failed to fetch repositories");
+        if (!response.ok) {
+            const errorDetails = await response.text(); // Capture response body for detailed error logging
+            throw new Error(`Failed to fetch repositories ${url} - Status: ${response.status} - Response: ${errorDetails}`);
+        }
         const repos = await response.json();
         return repos.map(repo => ({
             name: repo.name,
@@ -30,7 +33,10 @@ async function appendRepoContributers(repos) {
         if (repo.contributors_url) {
             try {
                 const contributorsResponse = await fetch(repo.contributors_url);
-                if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
+                if (!contributorsResponse.ok) {
+                    const errorDetails = await contributorsResponse.text();
+                    throw new Error(`Failed to fetch contributors for ${repo.name} - Status: ${contributorsResponse.status} - Response: ${errorDetails}`);
+                }
                 repo.contributorsList = (await contributorsResponse.json())
                     .map(contributor => ({
                         avatar_url: contributor.avatar_url,
