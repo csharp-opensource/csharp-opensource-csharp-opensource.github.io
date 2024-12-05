@@ -1,9 +1,17 @@
 {
-    "title": "C# OpenSource Repositories Viewer",
+    "title": "Bar Nuri Repositories Viewer",
     "fetchConfigs": [
         {
             "orgOrUser": "csharp-opensource",
             "isUser": false
+        },
+        {
+            "orgOrUser": "actions-opensource",
+            "isUser": false
+        },
+        {
+            "orgOrUser": "barnuri",
+            "isUser": true
         }
     ]
 }
