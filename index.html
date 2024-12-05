@@ -111,13 +111,11 @@
             <p>${repo.description || "No description"}</p>
           `;
 
-            const contributors = repo.contributorsList;
-
             const contributorsDiv = document.createElement("div");
             contributorsDiv.className = "contributors";
             contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
 
-            contributors.forEach(contributor => {
+            for (const contributor of repo.contributorsList || []) {
                 const contributorDiv = document.createElement("div");
                 contributorDiv.className = "contributor";
                 contributorDiv.innerHTML = `
@@ -125,11 +123,9 @@
               <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
             `;
                 contributorsDiv.appendChild(contributorDiv);
-            });
-
+            }
             repoDiv.appendChild(contributorsDiv);
             reposContainer.appendChild(element);
-
         }
     </script>
 </body>
