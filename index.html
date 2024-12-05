@@ -123,15 +123,7 @@
 
       try {
         const reposPromises = fetchConfigs.map(({ orgOrUser, isUser }) =>
-          fetch(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
-            .then(response => {
-              if (!response.ok) throw new Error("Failed to fetch repositories");
-              return response.json();
-            })
-            .catch(error => {
-              console.error(`Error fetching repositories for ${orgOrUser}:`, error);
-              return []; // Return an empty array on failure
-            })
+          fetchRepositoriesWithAuth(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
         );
 
         const allRepos = (await Promise.all(reposPromises))
@@ -145,6 +137,59 @@
       } catch (error) {
         console.error("Error fetching repositories:", error);
       }
+    }
+
+    async function fetchRepositoriesWithAuth(url) {
+      const token = localStorage.getItem('githubToken');
+      let headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, { headers });
+
+      // Check rate limit and ask for authentication if over the limit
+      const remaining = response.headers.get('X-RateLimit-Remaining');
+      const resetTime = response.headers.get('X-RateLimit-Reset');
+      
+      if (remaining === "0") {
+        const resetDate = new Date(resetTime * 1000);
+        alert(`Rate limit exceeded. Please authenticate to continue. Reset time: ${resetDate}`);
+        requestGitHubAuth();
+        throw new Error("Rate limit exceeded. Authentication required.");
+      }
+
+      if (!response.ok) throw new Error("Failed to fetch repositories");
+      return response.json();
+    }
+
+    function requestGitHubAuth() {
+      const authWindow = window.open("https://github.com/login/oauth/authorize?client_id=YOUR_CLIENT_ID&scope=repo", "_blank", "width=500,height=600");
+      authWindow.onunload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        if (code) {
+          fetch(`https://github.com/login/oauth/access_token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              client_id: "YOUR_CLIENT_ID",
+              client_secret: "YOUR_CLIENT_SECRET",
+              code: code
+            }),
+          })
+          .then(response => response.json())
+          .then(data => {
+            const token = data.access_token;
+            if (token) {
+              localStorage.setItem('githubToken', token);
+              fetchRepositories(); // Retry fetching repositories after authentication
+            }
+          });
+        }
+      };
     }
 
     // Function to display repositories
