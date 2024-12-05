@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loading...</title> <!-- Initial title -->
+  <title>Loading...</title>
   <style>
     /* Dark theme styles */
     body {
@@ -81,10 +81,10 @@
   <div id="repositories" style="display: none;"></div>
 
   <script>
-    // Update title immediately
     const title = "GitHub Repositories Viewer";
     document.title = title;
     document.getElementById("page-title").innerText = title;
+
     const fetchConfigs = [
       { orgOrUser: "csharp-opensource", isUser: false },
       { orgOrUser: "barnuri", isUser: true },
@@ -93,7 +93,34 @@
     const reposContainer = document.getElementById("repositories");
     const loadingIndicator = document.getElementById("loading");
 
+    // Check if data is in localStorage and is valid
+    function getCachedData() {
+      const data = localStorage.getItem("reposData");
+      const timestamp = localStorage.getItem("reposTimestamp");
+      const currentTime = new Date().getTime();
+      const ttl = 6 * 60 * 60 * 1000; // 6 hours
+
+      if (data && timestamp && (currentTime - timestamp < ttl)) {
+        return JSON.parse(data); // Return cached data if valid
+      }
+      return null; // Return null if no valid data exists
+    }
+
+    // Store data in localStorage
+    function cacheData(data) {
+      const currentTime = new Date().getTime();
+      localStorage.setItem("reposData", JSON.stringify(data));
+      localStorage.setItem("reposTimestamp", currentTime);
+    }
+
     async function fetchRepositories() {
+      // Try to load data from cache
+      const cachedData = getCachedData();
+      if (cachedData) {
+        displayRepositories(cachedData);
+        return;
+      }
+
       try {
         const reposPromises = fetchConfigs.map(({ orgOrUser, isUser }) =>
           fetch(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
@@ -113,53 +140,61 @@
 
         allRepos.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
 
-        const repoElements = allRepos.map(async (repo) => {
-          try {
-            const repoDiv = document.createElement("div");
-            repoDiv.className = "repo";
-            repoDiv.innerHTML = `
-              <h2><a href="${repo.html_url}" target="_blank">${repo.name}</a></h2>
-              <p>${repo.description || "No description"}</p>
-            `;
-
-            // Fetch contributors concurrently
-            const contributorsResponse = await fetch(repo.contributors_url);
-            if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
-
-            const contributors = await contributorsResponse.json();
-
-            const contributorsDiv = document.createElement("div");
-            contributorsDiv.className = "contributors";
-            contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
-
-            contributors.forEach(contributor => {
-              const contributorDiv = document.createElement("div");
-              contributorDiv.className = "contributor";
-              contributorDiv.innerHTML = `
-                <img src="${contributor.avatar_url}" alt="${contributor.login}" class="avatar">
-                <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
-              `;
-              contributorsDiv.appendChild(contributorDiv);
-            });
-
-            repoDiv.appendChild(contributorsDiv);
-            return repoDiv;
-          } catch (error) {
-            console.error(`Error processing repository ${repo.name}:`, error);
-            return null; // Skip failed repositories
-          }
-        });
-
-        // Wait for all repository elements to be created and append them
-        const elements = (await Promise.all(repoElements)).filter(element => element);
-        elements.forEach(element => reposContainer.appendChild(element));
-
-        // Hide the loading indicator and show the data
-        loadingIndicator.style.display = "none";
-        reposContainer.style.display = "block";
+        cacheData(allRepos); // Cache the fetched data
+        displayRepositories(allRepos); // Display the data
       } catch (error) {
         console.error("Error fetching repositories:", error);
       }
+    }
+
+    // Function to display repositories
+    function displayRepositories(repositories) {
+      const repoElements = repositories.map(async (repo) => {
+        try {
+          const repoDiv = document.createElement("div");
+          repoDiv.className = "repo";
+          repoDiv.innerHTML = `
+            <h2><a href="${repo.html_url}" target="_blank">${repo.name}</a></h2>
+            <p>${repo.description || "No description"}</p>
+          `;
+
+          const contributorsResponse = await fetch(repo.contributors_url);
+          if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
+
+          const contributors = await contributorsResponse.json();
+
+          const contributorsDiv = document.createElement("div");
+          contributorsDiv.className = "contributors";
+          contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
+
+          contributors.forEach(contributor => {
+            const contributorDiv = document.createElement("div");
+            contributorDiv.className = "contributor";
+            contributorDiv.innerHTML = `
+              <img src="${contributor.avatar_url}" alt="${contributor.login}" class="avatar">
+              <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
+            `;
+            contributorsDiv.appendChild(contributorDiv);
+          });
+
+          repoDiv.appendChild(contributorsDiv);
+          return repoDiv;
+        } catch (error) {
+          console.error(`Error processing repository ${repo.name}:`, error);
+          return null; // Skip failed repositories
+        }
+      });
+
+      Promise.all(repoElements).then(elements => {
+        elements.forEach(element => {
+          if (element) {
+            reposContainer.appendChild(element);
+          }
+        });
+
+        loadingIndicator.style.display = "none";
+        reposContainer.style.display = "block";
+      });
     }
 
     fetchRepositories();
