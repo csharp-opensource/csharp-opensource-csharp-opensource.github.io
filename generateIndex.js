@@ -34,21 +34,20 @@ async function fetchRepositories() {
             .flat()
             .filter(repo => repo); // Remove any null or undefined results
         allRepos.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
+        return allRepos;
     } catch (error) {
         console.error("Error fetching repositories:", error);
+        return [];
     }
 }
 
 async function modifyHTML() {
-    let repos = await fetchRepositories();
-    repos = repos.filter(x => x);
+    const repos = await fetchRepositories();
     const indexContent = fs.readFileSync('./index.html', 'utf-8');
     indexContent = indexContent.replace(`SET_TITLE`, config.title);
     indexContent = indexContent.replace(`SET_REPO_JSON`, JSON.stringify(repos, undefined, 4));
     fs.writeFileSync('./_site/index.html', indexContent);
     console.log('index.html generated successfully!');
 } 
-
-
 
 modifyHTML();
