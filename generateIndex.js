@@ -13,6 +13,7 @@ async function getRepos(url) {
         return repos.map(repo => ({
             html_url: repo.html_url,
             name: repo.name,
+            full_name: repo.full_name,
             description: repo.description,
             contributors_url: repo.contributors_url,
             pushed_at: repo.pushed_at,
