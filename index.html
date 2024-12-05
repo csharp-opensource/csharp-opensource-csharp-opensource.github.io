@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DefaultTitle</title>
+  <title>Loading...</title> <!-- Initial title -->
   <style>
     /* Dark theme styles */
     body {
@@ -81,6 +81,10 @@
   <div id="repositories" style="display: none;"></div>
 
   <script>
+    // Update title immediately
+    const title = "GitHub Repositories Viewer";
+    document.title = title;
+    document.getElementById("page-title").innerText = title;
     const fetchConfigs = [
       { orgOrUser: "csharp-opensource", isUser: false },
       { orgOrUser: "barnuri", isUser: true },
