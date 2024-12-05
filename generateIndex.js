@@ -15,7 +15,7 @@ async function getRepo(url) {
             if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
             repo.contributorsList = await contributorsResponse.json();
         } catch (error) {
-            console.error(`Error fetching contributors ${url}`, error);
+            console.error(`Error fetching contributors ${repo.contributors_url}`, error);
             repo.contributorsList = [];
         }
         return {
