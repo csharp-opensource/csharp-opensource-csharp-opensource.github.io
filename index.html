@@ -17,22 +17,35 @@
   <div id="repositories"></div>
   <script>
     // Define template variables here
-    const params = {
-      title: "C# Open Source Repositories", // Page title
-      org: "csharp-opensource"            // GitHub organization
-    };
+    const title = "Repositories";
+    const fetchConfigs = [{
+      orgOrUser: "csharp-opensource",
+      isUser: false,
+    }, {
+      orgOrUser: "barnuri",
+      isUser: true,
+    }];
 
     // Apply title to the page
-    document.title = params.title;
-    document.getElementById("page-title").innerText = params.title;
+    document.title = title;
+    document.getElementById("page-title").innerText = title;
 
-    const { org } = params;
     const reposContainer = document.getElementById("repositories");
 
     async function fetchRepositories() {
       try {
-        const reposResponse = await fetch(`https://api.github.com/orgs/${org}/repos`);
-        const repos = await reposResponse.json();
+        let repos = [];
+        for (const fetchConfig of fetchConfigs) {
+          try {
+              const reposResponse = await fetch(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`);
+              repos = [...repos, ...(await reposResponse.json())];
+          }
+          catch (error) {
+            console.error(`Error fetching repositories {fetchConfig.orgOrUser}:`, error);
+          }
+        }
+
+        repos.sort((a, b) => new Date(a.pushed_at) - new Date(b.pushed_at));
 
         for (const repo of repos) {
           const repoDiv = document.createElement("div");
