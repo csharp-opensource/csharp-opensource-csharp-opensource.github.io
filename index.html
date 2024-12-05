@@ -111,8 +111,15 @@
             const repoDiv = document.createElement("div");
             repoDiv.className = "repo";
             repoDiv.innerHTML = `
-                <h2><a class="repo_title" href="${repo.owner_url}" target="_blank">${repo.owner}</a></h2>
-                <h2><a class="repo_title" href="${repo.html_url}" target="_blank">${repo.name}</a></h2>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h2 style="margin: 0;">
+                        <a class="repo_title" href="${repo.owner_url}" target="_blank" style="text-decoration: none; color: inherit;">${repo.owner}</a>
+                    </h2>
+                    <span>/</span>
+                    <h2 style="margin: 0;">
+                        <a class="repo_title" href="${repo.html_url}" target="_blank" style="text-decoration: none; color: inherit;">${repo.name}</a>
+                    </h2>
+                </div>
                 <p>${repo.description || "No description"}</p>
               `;
 
