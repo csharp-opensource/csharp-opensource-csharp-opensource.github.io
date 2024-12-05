@@ -17,14 +17,17 @@ async function getRepo(url) {
             contributors_url: repo.contributors_url,
             pushed_at: repo.pushed_at,
         };
-        try {
-            const contributorsResponse = await fetch(repo.contributors_url);
-            if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
-            repo.contributorsList = await contributorsResponse.json();
-        } catch (error) {
-            console.error(`Error fetching contributors ${repo.contributors_url}`, error);
-            repo.contributorsList = [];
+        if (repo.contributors_url) {
+            try {
+                const contributorsResponse = await fetch(repo.contributors_url);
+                if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
+                repo.contributorsList = await contributorsResponse.json();
+            } catch (error) {
+                console.error(`Error fetching contributors ${repo.contributors_url}`, error);
+                repo.contributorsList = [];
+            }
         }
+        repo.contributorsList = repo.contributorsList || [];
         return repo;
     } catch (error) {
         console.error(`Error fetching repository ${url}`, error);
