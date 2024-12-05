@@ -14,6 +14,7 @@ async function getRepos(url) {
             html_url: repo.html_url,
             name: repo.name,
             full_name: repo.full_name,
+            owner: repo.full_name.replace(`/${repo.name}`, ''),
             description: repo.description,
             contributors_url: repo.contributors_url,
             pushed_at: repo.pushed_at,
