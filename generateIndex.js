@@ -11,10 +11,10 @@ async function getRepos(url) {
         if (!response.ok) throw new Error("Failed to fetch repositories");
         const repos = await response.json();
         return repos.map(repo => ({
-            html_url: repo.html_url,
             name: repo.name,
             full_name: repo.full_name,
             owner: repo.full_name.replace(`/${repo.name}`, ''),
+            owner_url: repo.html_url.replace(`/${repo.name}`, ''),
             description: repo.description,
             contributors_url: repo.contributors_url,
             pushed_at: repo.pushed_at,
