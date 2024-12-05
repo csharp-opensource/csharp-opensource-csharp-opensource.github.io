@@ -5,39 +5,38 @@ let headers = {
     'Authorization': process.env.GITHUB_TOKEN,
 };
 
+async function getRepo(url) {
+    try {
+        const response = await fetch(url, { headers });
+        if (!response.ok) throw new Error("Failed to fetch repositories");
+        let repo = await response.json();
+        try {
+            const contributorsResponse = await fetch(repo.contributors_url);
+            if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
+            repo.contributorsList = await contributorsResponse.json();
+        }  catch (error) {
+            console.error(`Error fetching contributors ${url}`, error);
+            repo.contributorsList = [];
+        }
+        return repo;
+    } catch (error) {
+        console.error(`Error fetching repository ${url}`, error);
+        return null;
+    }
+}
+
 async function fetchRepositories() {
     try {
         const reposPromises = fetchConfigs.map(({ orgOrUser, isUser }) =>
             getRepo(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
         );
-
         const allRepos = (await Promise.all(reposPromises))
             .flat()
             .filter(repo => repo); // Remove any null or undefined results
-
         allRepos.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
-        const repoPromises = repositories.map(async (repo) => {
-            try {
-                const contributorsResponse = await fetch(repo.contributors_url);
-                if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
-                repo.contributorsList = await contributorsResponse.json();
-                return repo;
-            } catch (error) {
-                console.error(`Error processing repository ${repo.name}:`, error);
-                return null; // Skip failed repositories
-            }
-            });
-        
-            await Promise.all(repoPromises);
     } catch (error) {
         console.error("Error fetching repositories:", error);
     }
-}
-
-async function getRepo(url) {
-    const response = await fetch(url, { headers });
-    if (!response.ok) throw new Error("Failed to fetch repositories");
-    return response.json();
 }
 
 async function modifyHTML() {
