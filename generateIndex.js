@@ -14,7 +14,7 @@ async function getRepo(url) {
             const contributorsResponse = await fetch(repo.contributors_url);
             if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
             repo.contributorsList = await contributorsResponse.json();
-        }  catch (error) {
+        } catch (error) {
             console.error(`Error fetching contributors ${url}`, error);
             repo.contributorsList = [];
         }
@@ -27,7 +27,7 @@ async function getRepo(url) {
 
 async function fetchRepositories() {
     try {
-        const reposPromises = fetchConfigs.map(({ orgOrUser, isUser }) =>
+        const reposPromises = config.fetchConfigs.map(({ orgOrUser, isUser }) =>
             getRepo(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
         );
         const allRepos = (await Promise.all(reposPromises))
@@ -43,11 +43,11 @@ async function fetchRepositories() {
 
 async function modifyHTML() {
     const repos = await fetchRepositories();
-    const indexContent = fs.readFileSync('./index.html', 'utf-8');
+    let indexContent = fs.readFileSync('./index.html', 'utf-8');
     indexContent = indexContent.replace(`SET_TITLE`, config.title);
     indexContent = indexContent.replace(`SET_REPO_JSON`, JSON.stringify(repos, undefined, 4));
     fs.writeFileSync('./_site/index.html', indexContent);
     console.log('index.html generated successfully!');
-} 
+}
 
 modifyHTML();
