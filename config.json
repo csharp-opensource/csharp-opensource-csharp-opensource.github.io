@@ -1,0 +1,13 @@
+{
+    "title": "GitHub Repositories Viewer",
+    "fetchConfigs": [
+        {
+            "orgOrUser": "csharp-opensource",
+            "isUser": false
+        },
+        {
+            "orgOrUser": "barnuri",
+            "isUser": true
+        }
+    ]
+}

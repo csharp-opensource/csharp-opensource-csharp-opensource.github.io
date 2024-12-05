@@ -1,248 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loading...</title>
-  <style>
-    /* Dark theme styles */
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #ffffff;
-      margin: 20px;
-    }
-    h1 {
-      color: #ffcc00;
-    }
-    .repo {
-      border: 1px solid #444;
-      background-color: #1e1e1e;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
-    }
-    .repo h2 {
-      margin: 0;
-      color: #ffcc00;
-    }
-    .repo p {
-      color: #aaa;
-    }
-    .contributors {
-      margin-top: 10px;
-    }
-    .contributor {
-      display: inline-block;
-      margin-right: 10px;
-    }
-    .avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      border: 2px solid #444;
-    }
-    .contributor a {
-      color: #ffcc00;
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .contributor a:hover {
-      text-decoration: underline;
-    }
-    #loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      color: #ffcc00;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .spinner {
-      border: 4px solid #444;
-      border-top: 4px solid #ffcc00;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-      margin-left: 10px;
-    }
-  </style>
-</head>
-<body>
-  <h1 id="page-title">Repositories</h1>
-  <div id="loading">
-    Loading data<span class="spinner"></span>
-  </div>
-  <div id="repositories" style="display: none;"></div>
-
-  <script>
-    const title = "GitHub Repositories Viewer";
-    document.title = title;
-    document.getElementById("page-title").innerText = title;
-
-    const fetchConfigs = [
-      { orgOrUser: "csharp-opensource", isUser: false },
-      { orgOrUser: "barnuri", isUser: true },
-    ];
-
-    const reposContainer = document.getElementById("repositories");
-    const loadingIndicator = document.getElementById("loading");
-
-    // Check if data is in localStorage and is valid
-    function getCachedData() {
-      const data = localStorage.getItem("reposData");
-      const timestamp = localStorage.getItem("reposTimestamp");
-      const currentTime = new Date().getTime();
-      const ttl = 6 * 60 * 60 * 1000; // 6 hours
-
-      if (data && timestamp && (currentTime - timestamp < ttl)) {
-        return JSON.parse(data); // Return cached data if valid
-      }
-      return null; // Return null if no valid data exists
-    }
-
-    // Store data in localStorage
-    function cacheData(data) {
-      const currentTime = new Date().getTime();
-      localStorage.setItem("reposData", JSON.stringify(data));
-      localStorage.setItem("reposTimestamp", currentTime);
-    }
-
-    async function fetchRepositories() {
-      // Try to load data from cache
-      const cachedData = getCachedData();
-      if (cachedData) {
-        displayRepositories(cachedData);
-        return;
-      }
-
-      try {
-        const reposPromises = fetchConfigs.map(({ orgOrUser, isUser }) =>
-          fetchRepositoriesWithAuth(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`)
-        );
-
-        const allRepos = (await Promise.all(reposPromises))
-          .flat()
-          .filter(repo => repo); // Remove any null or undefined results
-
-        allRepos.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
-
-        cacheData(allRepos); // Cache the fetched data
-        displayRepositories(allRepos); // Display the data
-      } catch (error) {
-        console.error("Error fetching repositories:", error);
-      }
-    }
-
-    async function fetchRepositoriesWithAuth(url) {
-      const token = localStorage.getItem('githubToken');
-      let headers = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(url, { headers });
-
-      // Check rate limit and ask for authentication if over the limit
-      const remaining = response.headers.get('X-RateLimit-Remaining');
-      const resetTime = response.headers.get('X-RateLimit-Reset');
-      
-      if (remaining === "0") {
-        const resetDate = new Date(resetTime * 1000);
-        alert(`Rate limit exceeded. Please authenticate to continue. Reset time: ${resetDate}`);
-        requestGitHubAuth();
-        throw new Error("Rate limit exceeded. Authentication required.");
-      }
-
-      if (!response.ok) throw new Error("Failed to fetch repositories");
-      return response.json();
-    }
-
-    function requestGitHubAuth() {
-      const authWindow = window.open("https://github.com/login/oauth/authorize?client_id=YOUR_CLIENT_ID&scope=repo", "_blank", "width=500,height=600");
-      authWindow.onunload = () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        if (code) {
-          fetch(`https://github.com/login/oauth/access_token`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              client_id: "YOUR_CLIENT_ID",
-              client_secret: "YOUR_CLIENT_SECRET",
-              code: code
-            }),
-          })
-          .then(response => response.json())
-          .then(data => {
-            const token = data.access_token;
-            if (token) {
-              localStorage.setItem('githubToken', token);
-              fetchRepositories(); // Retry fetching repositories after authentication
-            }
-          });
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        /* Dark theme styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 20px;
         }
-      };
-    }
 
-    // Function to display repositories
-    function displayRepositories(repositories) {
-      const repoElements = repositories.map(async (repo) => {
-        try {
-          const repoDiv = document.createElement("div");
-          repoDiv.className = "repo";
-          repoDiv.innerHTML = `
+        h1 {
+            color: #ffcc00;
+        }
+
+        .repo {
+            border: 1px solid #444;
+            background-color: #1e1e1e;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .repo h2 {
+            margin: 0;
+            color: #ffcc00;
+        }
+
+        .repo p {
+            color: #aaa;
+        }
+
+        .contributors {
+            margin-top: 10px;
+        }
+
+        .contributor {
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #444;
+        }
+
+        .contributor a {
+            color: #ffcc00;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .contributor a:hover {
+            text-decoration: underline;
+        }
+
+        #loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #ffcc00;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            border: 4px solid #444;
+            border-top: 4px solid #ffcc00;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+    </style>
+</head>
+
+<body>
+    <h1 id="page-title">Loading...</h1>
+    <div id="repositories"></div>
+    <script>
+        var title = `SET_TITLE`;
+        var repos = SET_REPO_JSON;
+        document.title = title;
+        document.getElementById("page-title").innerText = title;
+        const reposContainer = document.getElementById("repositories");
+        const loadingIndicator = document.getElementById("loading");
+        for (const repo of repos) {
+            const repoDiv = document.createElement("div");
+            repoDiv.className = "repo";
+            repoDiv.innerHTML = `
             <h2><a href="${repo.html_url}" target="_blank">${repo.name}</a></h2>
             <p>${repo.description || "No description"}</p>
           `;
 
-          const contributorsResponse = await fetch(repo.contributors_url);
-          if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
+            const contributors = repo.contributorsList;
 
-          const contributors = await contributorsResponse.json();
+            const contributorsDiv = document.createElement("div");
+            contributorsDiv.className = "contributors";
+            contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
 
-          const contributorsDiv = document.createElement("div");
-          contributorsDiv.className = "contributors";
-          contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
-
-          contributors.forEach(contributor => {
-            const contributorDiv = document.createElement("div");
-            contributorDiv.className = "contributor";
-            contributorDiv.innerHTML = `
+            contributors.forEach(contributor => {
+                const contributorDiv = document.createElement("div");
+                contributorDiv.className = "contributor";
+                contributorDiv.innerHTML = `
               <img src="${contributor.avatar_url}" alt="${contributor.login}" class="avatar">
               <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
             `;
-            contributorsDiv.appendChild(contributorDiv);
-          });
+                contributorsDiv.appendChild(contributorDiv);
+            });
 
-          repoDiv.appendChild(contributorsDiv);
-          return repoDiv;
-        } catch (error) {
-          console.error(`Error processing repository ${repo.name}:`, error);
-          return null; // Skip failed repositories
-        }
-      });
-
-      Promise.all(repoElements).then(elements => {
-        elements.forEach(element => {
-          if (element) {
+            repoDiv.appendChild(contributorsDiv);
             reposContainer.appendChild(element);
-          }
-        });
 
-        loadingIndicator.style.display = "none";
-        reposContainer.style.display = "block";
-      });
-    }
-
-    fetchRepositories();
-  </script>
+        }
+    </script>
 </body>
+
 </html>
