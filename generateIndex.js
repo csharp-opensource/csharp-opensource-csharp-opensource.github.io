@@ -31,7 +31,7 @@ async function appendRepoContributers(repos) {
                 if (!contributorsResponse.ok) throw new Error("Failed to fetch contributors");
                 repo.contributorsList = await contributorsResponse.json();
             } catch (error) {
-                console.error(`Error fetching contributors ${repo.contributors_url}`, error);
+                console.error(`Error fetching contributors ${repo.name} ${repo.contributors_url}`, error);
                 repo.contributorsList = [];
             }
         }
