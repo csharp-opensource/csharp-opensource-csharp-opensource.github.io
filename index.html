@@ -3,76 +3,144 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repositories</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    .repo { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
-    .contributors { margin-top: 10px; }
-    .contributor { display: inline-block; margin-right: 10px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; }
+    /* Dark theme styles */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      margin: 20px;
+    }
+    h1 {
+      color: #ffcc00;
+    }
+    .repo {
+      border: 1px solid #444;
+      background-color: #1e1e1e;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    }
+    .repo h2 {
+      margin: 0;
+      color: #ffcc00;
+    }
+    .repo p {
+      color: #aaa;
+    }
+    .contributors {
+      margin-top: 10px;
+    }
+    .contributor {
+      display: inline-block;
+      margin-right: 10px;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #444;
+    }
+    .contributor a {
+      color: #ffcc00;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .contributor a:hover {
+      text-decoration: underline;
+    }
+    #loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #ffcc00;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spinner {
+      border: 4px solid #444;
+      border-top: 4px solid #ffcc00;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
-  <h1 id="page-title"></h1>
-  <div id="repositories"></div>
-  <script>
-    // Define template variables here
-    const title = "Repositories";
-    const fetchConfigs = [{
-      orgOrUser: "csharp-opensource",
-      isUser: false,
-    }, {
-      orgOrUser: "barnuri",
-      isUser: true,
-    }];
+  <h1 id="page-title">Repositories</h1>
+  <div id="loading">
+    Loading data<span class="spinner"></span>
+  </div>
+  <div id="repositories" style="display: none;"></div>
 
-    // Apply title to the page
-    document.title = title;
-    document.getElementById("page-title").innerText = title;
+  <script>
+    const fetchConfigs = [
+      { orgOrUser: "csharp-opensource", isUser: false },
+      { orgOrUser: "barnuri", isUser: true },
+    ];
 
     const reposContainer = document.getElementById("repositories");
+    const loadingIndicator = document.getElementById("loading");
 
     async function fetchRepositories() {
       try {
-        let repos = [];
-        for (const fetchConfig of fetchConfigs) {
-          try {
-              const reposResponse = await fetch(`https://api.github.com/${fetchConfig.isUser ? "users" : "orgs"}/${fetchConfig.orgOrUser}/repos?sort=pushed`);
-              repos = [...repos, ...(await reposResponse.json())];
-          }
-          catch (error) {
-            console.error(`Error fetching repositories {fetchConfig.orgOrUser}:`, error);
-          }
-        }
+        const reposPromises = fetchConfigs.map(async ({ orgOrUser, isUser }) => {
+          const response = await fetch(`https://api.github.com/${isUser ? "users" : "orgs"}/${orgOrUser}/repos?sort=pushed`);
+          return response.json();
+        });
 
-        repos.sort((a, b) => new Date(a.pushed_at) - new Date(b.pushed_at));
+        const allRepos = (await Promise.all(reposPromises)).flat();
+        allRepos.sort((a, b) => new Date(b.pushed_at) - new Date(a.pushed_at));
 
-        for (const repo of repos) {
+        const repoElements = allRepos.map(async (repo) => {
           const repoDiv = document.createElement("div");
           repoDiv.className = "repo";
-          repoDiv.innerHTML = `<h2>${repo.name}</h2><p>${repo.description || "No description"}</p>`;
-          reposContainer.appendChild(repoDiv);
+          repoDiv.innerHTML = `
+            <h2>${repo.name}</h2>
+            <p>${repo.description || "No description"}</p>
+          `;
 
-          // Fetch contributors
-          const contributorsResponse = await fetch(repo.contributors_url);
-          const contributors = await contributorsResponse.json();
+          // Fetch contributors concurrently
+          try {
+            const contributorsResponse = await fetch(repo.contributors_url);
+            const contributors = await contributorsResponse.json();
 
-          const contributorsDiv = document.createElement("div");
-          contributorsDiv.className = "contributors";
-          contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
+            const contributorsDiv = document.createElement("div");
+            contributorsDiv.className = "contributors";
+            contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
 
-          contributors.forEach(contributor => {
-            const contributorDiv = document.createElement("div");
-            contributorDiv.className = "contributor";
-            contributorDiv.innerHTML = `
-              <img src="${contributor.avatar_url}" alt="${contributor.login}" class="avatar">
-              <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
-            `;
-            contributorsDiv.appendChild(contributorDiv);
-          });
+            contributors.forEach(contributor => {
+              const contributorDiv = document.createElement("div");
+              contributorDiv.className = "contributor";
+              contributorDiv.innerHTML = `
+                <img src="${contributor.avatar_url}" alt="${contributor.login}" class="avatar">
+                <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
+              `;
+              contributorsDiv.appendChild(contributorDiv);
+            });
 
-          repoDiv.appendChild(contributorsDiv);
-        }
+            repoDiv.appendChild(contributorsDiv);
+          } catch (error) {
+            console.error(`Error fetching contributors for ${repo.name}:`, error);
+          }
+
+          return repoDiv;
+        });
+
+        // Wait for all repository elements to be created and append them
+        const elements = await Promise.all(repoElements);
+        elements.forEach(element => reposContainer.appendChild(element));
+
+        // Hide the loading indicator and show the data
+        loadingIndicator.style.display = "none";
+        reposContainer.style.display = "block";
       } catch (error) {
         console.error("Error fetching repositories:", error);
       }
