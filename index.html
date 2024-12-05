@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    .repo { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+    .contributors { margin-top: 10px; }
+    .contributor { display: inline-block; margin-right: 10px; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <h1 id="page-title"></h1>
+  <div id="repositories"></div>
+  <script>
+    // Define template variables here
+    const params = {
+      title: "C# Open Source Repositories", // Page title
+      org: "csharp-opensource"            // GitHub organization
+    };
+
+    // Apply title to the page
+    document.title = params.title;
+    document.getElementById("page-title").innerText = params.title;
+
+    const { org } = params;
+    const reposContainer = document.getElementById("repositories");
+
+    async function fetchRepositories() {
+      try {
+        const reposResponse = await fetch(`https://api.github.com/orgs/${org}/repos`);
+        const repos = await reposResponse.json();
+
+        for (const repo of repos) {
+          const repoDiv = document.createElement("div");
+          repoDiv.className = "repo";
+          repoDiv.innerHTML = `<h2>${repo.name}</h2><p>${repo.description || "No description"}</p>`;
+          reposContainer.appendChild(repoDiv);
+
+          // Fetch contributors
+          const contributorsResponse = await fetch(repo.contributors_url);
+          const contributors = await contributorsResponse.json();
+
+          const contributorsDiv = document.createElement("div");
+          contributorsDiv.className = "contributors";
+          contributorsDiv.innerHTML = "<strong>Contributors:</strong>";
+
+          contributors.forEach(contributor => {
+            const contributorDiv = document.createElement("div");
+            contributorDiv.className = "contributor";
+            contributorDiv.innerHTML = `
+              <img src="${contributor.avatar_url}" alt="${contributor.login}" class="avatar">
+              <a href="${contributor.html_url}" target="_blank">${contributor.login}</a>
+            `;
+            contributorsDiv.appendChild(contributorDiv);
+          });
+
+          repoDiv.appendChild(contributorsDiv);
+        }
+      } catch (error) {
+        console.error("Error fetching repositories:", error);
+      }
+    }
+
+    fetchRepositories();
+  </script>
+</body>
+</html>
